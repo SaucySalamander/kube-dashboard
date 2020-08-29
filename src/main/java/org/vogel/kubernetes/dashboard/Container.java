@@ -2,16 +2,35 @@ package org.vogel.kubernetes.dashboard;
 
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
-import io.kubernetes.client.models.*;
+import io.kubernetes.client.models.V1ConfigMapKeySelector;
+import io.kubernetes.client.models.V1Container;
+import io.kubernetes.client.models.V1ContainerPort;
+import io.kubernetes.client.models.V1ContainerStatus;
+import io.kubernetes.client.models.V1EnvFromSource;
+import io.kubernetes.client.models.V1EnvVar;
+import io.kubernetes.client.models.V1EnvVarSource;
+import io.kubernetes.client.models.V1HTTPGetAction;
+import io.kubernetes.client.models.V1ObjectFieldSelector;
+import io.kubernetes.client.models.V1Probe;
+import io.kubernetes.client.models.V1ResourceFieldSelector;
+import io.kubernetes.client.models.V1ResourceRequirements;
+import io.kubernetes.client.models.V1SecretKeySelector;
+import io.kubernetes.client.models.V1VolumeMount;
 import lombok.Getter;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.vogel.kubernetes.dashboard.FormatUtils.joinListWithCommas;
 
@@ -168,13 +187,8 @@ public class Container {
             V1HTTPGetAction httpGet = probe.getHttpGet();
             if (httpGet.getPort() != null) {
                 IntOrString port = httpGet.getPort();
-                if (port.isInteger() && port.getIntValue() > 0) {
-                    url = String.format("%s://%s:%d/%s", httpGet.getScheme(), httpGet.getHost(), httpGet.getPort()
-                                                .getIntValue(),
-                                        httpGet.getPath());
-                } else if (!port.isInteger() && isBlank(port.getStrValue())) {
-                    url = String.format("%s://%s:%s/%s", httpGet.getScheme(), httpGet.getHost(), httpGet.getPort()
-                                                .getStrValue(),
+                if (isNotBlank(port.toString())) {
+                    url = String.format("%s://%s:%s/%s", httpGet.getScheme(), httpGet.getHost(), port.toString(),
                                         httpGet.getPath());
                 } else {
                     url = String.format("%s://%s/%s", httpGet.getScheme(), httpGet.getHost(), httpGet.getPath());
@@ -188,7 +202,7 @@ public class Container {
             return String.format("tcp-socket %s:%s %s", probe.getTcpSocket()
                     .getHost(), probe.getTcpSocket()
                                          .getPort()
-                                         .getIntValue(), attrs);
+                                         .toString(), attrs);
         }
 
         return String.format("unknown %s", attrs);
@@ -201,13 +215,13 @@ public class Container {
             Boolean optional = null;
             String prefix = envFromSource.getPrefix();
             if (envFromSource.getConfigMapRef() != null) {
-                from = " ConfigMap";
+                from = "ConfigMap";
                 envName = envFromSource.getConfigMapRef()
                         .getName();
                 optional = Boolean.TRUE.equals(envFromSource.getConfigMapRef()
                                                        .isOptional());
             } else if (envFromSource.getSecretRef() != null) {
-                from = " Secret";
+                from = "Secret";
                 envName = envFromSource.getSecretRef()
                         .getName();
                 optional = Boolean.TRUE.equals(envFromSource.getSecretRef()
@@ -220,7 +234,6 @@ public class Container {
         }
     }
 
-    // TODO start need to fix the logic for this
     private void describeContainerEnvVars(V1Container kubeContainer) {
         List<V1EnvVar> envVars = kubeContainer.getEnv();
         if (envVars != null) {
@@ -231,16 +244,22 @@ public class Container {
                     containerEnvironment = new ContainerEnvironment(envVar.getName(), envVar.getValue(), null);
                 } else {
                     if (envVarValueFrom.getFieldRef() != null) {
-                        String valueFrom = envVarResolverFunc(envVar);
+                        String valueFrom = "";
 
                         V1ObjectFieldSelector fieldRef = envVarValueFrom.getFieldRef();
                         String value = String.format("%s (%s:%s)", valueFrom, fieldRef.getApiVersion(),
                                                      fieldRef.getFieldPath());
                         containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
                     } else if (envVarValueFrom.getResourceFieldRef() != null) {
-                        extractContainerResourceValue(envVarValueFrom.getResourceFieldRef(), kubeContainer);
+                        String valueFrom = extractContainerResourceValue(envVarValueFrom.getResourceFieldRef(),
+                                                                         kubeContainer);
                         String resource = envVarValueFrom.getResourceFieldRef()
                                 .getResource();
+                        if (valueFrom.equals("0") && StringUtils.equalsAny(resource, "limits.cpu", "limits.memory")) {
+                            valueFrom = "node allocatable";
+                        }
+                        String value = String.format("%s (%s)", valueFrom, resource);
+                        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
                     } else if (envVarValueFrom.getSecretKeyRef() != null) {
                         V1SecretKeySelector secretKeyRef = envVarValueFrom.getSecretKeyRef();
                         Boolean optional = Boolean.TRUE.equals(secretKeyRef.isOptional());
@@ -264,25 +283,6 @@ public class Container {
         }
     }
 
-    private String envVarResolverFunc(V1EnvVar env) {
-        try {
-            V1ObjectFieldSelector fieldRef = env.getValueFrom()
-                    .getFieldRef();
-            String internalFieldPath = convertFieldLabel(fieldRef.getApiVersion(), "Pod", fieldRef.getFieldPath(), "");
-            return extractFieldPathAsString(/*pod*/null, internalFieldPath);
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private String convertFieldLabel(String apiVersion, String pod, String fieldPath, String s) {
-        return "";
-    }
-
-    private String extractFieldPathAsString(Object obj, String fieldPath) {
-        return "";
-    }
-
     private String extractContainerResourceValue(V1ResourceFieldSelector fs,
                                                  V1Container kubeContainer) {
         Quantity divisor = new Quantity(new BigDecimal(fs.getDivisor()), Quantity.Format.DECIMAL_SI);
@@ -291,15 +291,27 @@ public class Container {
             case "limits.cpu":
                 return convertResourceCPUToString(kubeContainer.getResources()
                                                           .getLimits()
-                                                          .get(""), divisor);
+                                                          .get("cpu"), divisor);
             case "limits.memory":
+                return convertResourceMemoryToString(kubeContainer.getResources()
+                                                             .getLimits()
+                                                             .get("memory"), divisor);
             case "limits.ephemeral-storage":
+                return convertResourceEphemeralStorageToString(kubeContainer.getResources()
+                                                                       .getLimits()
+                                                                       .get("ephemeral-storage"), divisor);
             case "requests.cpu":
                 return convertResourceCPUToString(kubeContainer.getResources()
                                                           .getRequests()
-                                                          .get(""), divisor);
+                                                          .get("cpu"), divisor);
             case "requests.memory":
+                return convertResourceMemoryToString(kubeContainer.getResources()
+                                                             .getRequests()
+                                                             .get("memory"), divisor);
             case "requests.ephemeral-storage":
+                return convertResourceEphemeralStorageToString(kubeContainer.getResources()
+                                                                       .getRequests()
+                                                                       .get("ephemeral-storage"), divisor);
             default:
         }
 
@@ -307,11 +319,31 @@ public class Container {
     }
 
     private String convertResourceCPUToString(Quantity cpu, Quantity divisor) {
-        return ""/*cpu.getNumber()
-                .divide(divisor.getNumber())
-                .toString()*/;
+        double cpuMilliValue = Math.ceil(cpu.getNumber()
+                                                 .doubleValue() * 1000);
+        double divisorMilliValue = Math.ceil(divisor.getNumber()
+                                                     .doubleValue() * 1000);
+        return Long.toString(Double.valueOf(Math.ceil(cpuMilliValue / divisorMilliValue))
+                                     .longValue());
     }
-    // TODO end need to fix the logic for this
+
+    private String convertResourceMemoryToString(Quantity memory, Quantity divisor) {
+        double memoryValue = memory.getNumber()
+                .doubleValue();
+        double divisorValue = divisor.getNumber()
+                .doubleValue();
+        return Long.toString(Double.valueOf(Math.ceil(memoryValue / divisorValue))
+                                     .longValue());
+    }
+
+    private String convertResourceEphemeralStorageToString(Quantity ephemeralStorage, Quantity divisor) {
+        double storageValue = ephemeralStorage.getNumber()
+                .doubleValue();
+        double divisorValue = divisor.getNumber()
+                .doubleValue();
+        return Long.toString(Double.valueOf(Math.ceil(storageValue / divisorValue))
+                                     .longValue());
+    }
 
     private void describeContainerVolumes(V1Container kubeContainer) {
         List<V1VolumeMount> volumeMounts = kubeContainer.getVolumeMounts();
