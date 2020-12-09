@@ -27,7 +27,6 @@ repositories {
     mavenCentral()
 }
 
-
 dependencies {
     compile('org.springframework.boot:spring-boot-starter-actuator')
     compile('org.springframework.boot:spring-boot-starter-thymeleaf')
@@ -42,4 +41,12 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.2'
     testCompile('org.springframework.boot:spring-boot-starter-test')
     testCompile 'org.spockframework:spock-core:1.1-groovy-2.4'
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "cjvogel1972_kube-dashboard"
+        property "sonar.organization", "cjvogel1972"
+        property "sonar.host.url", "https://sonarcloud.io"
+    }
 }
