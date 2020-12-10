@@ -11,7 +11,7 @@ pipeline {
             steps {
                 script {
                     properties([
-                        pipelineTriggers([[$class: "GitHubPushTrigger"])
+                        pipelineTriggers([[$class: "GitHubPushTrigger"]])
                     ])
                 }
             }
