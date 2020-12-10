@@ -58,7 +58,7 @@
                     <a th:href="@{/namespaces/{namespace}/pods/{podName}/logs(namespace=${namespace},podName=${pod.name})}"
                        th:text="${pod.name}"></a></td>
                 <td th:text="${pod.ready}"></td>
-                <td th:text="${pod.reason}"></td>
+                <td th:text="${pod.status}"></td>
                 <td th:text="${pod.restarts}"></td>
                 <td th:text="${pod.age}"></td>
                 <td><a href="#"
