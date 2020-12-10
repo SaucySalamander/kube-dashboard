@@ -57,20 +57,16 @@ pipeline {
         stage('Kick off deployment pipleline') {
             steps {
                 script {
-                    echo "Author ${GIT_AUTHOR_NAME}"
-                    PARAM = """{
+                    committerName = sh (
+                          script: 'git --no-pager show -s --format=\'%an\'',
+                          returnStdout: true
+                    ).trim()
+                    echo "Author ${committerName}"
+                    PARAM = """
+                    {
                         "pipeline":{
                             "pipelineName":"K8s_Pipeline",
-                            "parameters":"[
-                                {\\"parameterName\\": \\"authorName\\", \\"parameterValue\\": \\"${GIT_AUTHOR_NAME}\\"},
-                                {\\"parameterName\\": \\"chartName\\", \\"parameterValue\\": \\"kube-dashboard\\"},
-                                {\\"parameterName\\": \\"namespace\\", \\"parameterValue\\": \\"kube-dashboard\\"},
-                                {\\"parameterName\\": \\"releaseName\\", \\"parameterValue\\": \\"kube-dashboard\\"},
-                                {\\"parameterName\\": \\"repoName\\", \\"parameterValue\\": \\"codefest\\"},
-                                {\\"parameterName\\": \\"repoUrl\\", \\"parameterValue\\": \\"https://dbrande99.github.io/helm-chart/\\"},
-                                {\\"parameterName\\": \\"valuesFile\\", \\"parameterValue\\": \\"\\"},
-                                {\\"parameterName\\": \\"webhookUrl\\", \\"parameterValue\\": \\"https://outlook.office.com/webhook/bcfd3775-a771-49e6-b79d-22ff707a4c40@06ad24ba-31eb-40d8-948c-a29338f7d041/IncomingWebhook/0cd223e391824897a4ddeb6ad990a670/4dc936cc-4cbc-4246-8c07-35ff70e9a0e4\\"}
-                             ]"
+                            "parameters":"[{\\"parameterName\\": \\"authorName\\", \\"parameterValue\\": \\"${committerName}\\"}, {\\"parameterName\\": \\"chartName\\", \\"parameterValue\\": \\"kube-dashboard\\"}, {\\"parameterName\\": \\"namespace\\", \\"parameterValue\\": \\"kube-dashboard\\"}, {\\"parameterName\\": \\"releaseName\\", \\"parameterValue\\": \\"kube-dashboard\\"}, {\\"parameterName\\": \\"repoName\\", \\"parameterValue\\": \\"codefest\\"}, {\\"parameterName\\": \\"repoUrl\\", \\"parameterValue\\": \\"https://dbrande99.github.io/helm-chart/\\"}, {\\"parameterName\\": \\"valuesFile\\", \\"parameterValue\\": \\"\\"}, {\\"parameterName\\": \\"webhookUrl\\", \\"parameterValue\\": \\"https://outlook.office.com/webhook/bcfd3775-a771-49e6-b79d-22ff707a4c40@06ad24ba-31eb-40d8-948c-a29338f7d041/IncomingWebhook/0cd223e391824897a4ddeb6ad990a670/4dc936cc-4cbc-4246-8c07-35ff70e9a0e4\\"}]"
                         }
                     }
                     """
