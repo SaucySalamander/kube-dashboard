@@ -7,6 +7,7 @@ pipeline {
     environment {
         registry = "cjvogel1972/kube-dashboard"
         registryCredential = 'dockerhub'
+        image = ''
     }
     options {
         skipDefaultCheckout()
@@ -35,7 +36,10 @@ pipeline {
         stage('Build Docker image') {
             steps {
                 script {
-                    docker.build("cjvogel1972/kube-dashboard:0.0.1").push()
+                    image = docker.build(registry + ":0.0.1")
+                    docker.withRegistry( '', registryCredential ) {
+                        image.push()
+                    }
                 }
             }
         }
