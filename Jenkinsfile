@@ -38,7 +38,7 @@ pipeline {
             steps {
                 checkout scm
                 withSonarQubeEnv("sonar") {
-                    sh './gradlew build sonarqube --no-daemon'
+                    sh './gradlew build jTR sonarqube --no-daemon'
                 }
             }
         }
