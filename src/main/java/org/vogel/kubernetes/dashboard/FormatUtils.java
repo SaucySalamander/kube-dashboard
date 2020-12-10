@@ -1,7 +1,15 @@
 package org.vogel.kubernetes.dashboard;
 
 import io.kubernetes.client.ApiException;
-import io.kubernetes.client.models.*;
+import io.kubernetes.client.models.V1EndpointAddress;
+import io.kubernetes.client.models.V1EndpointPort;
+import io.kubernetes.client.models.V1EndpointSubset;
+import io.kubernetes.client.models.V1Endpoints;
+import io.kubernetes.client.models.V1EndpointsList;
+import io.kubernetes.client.models.V1LabelSelector;
+import io.kubernetes.client.models.V1LabelSelectorRequirement;
+import io.kubernetes.client.models.V1Service;
+import io.kubernetes.client.models.V1ServicePort;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
@@ -9,7 +17,12 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -17,6 +30,12 @@ import static org.apache.commons.lang3.StringUtils.equalsAny;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public class FormatUtils {
+
+    public static final String NONE = "<none>";
+
+    private FormatUtils() {
+    }
+
     public static String translateTimestamp(DateTime timestamp) {
         DateTime now = DateTime.now();
         Duration duration = new Duration(timestamp, now);
@@ -103,7 +122,7 @@ public class FormatUtils {
             }
         }
 
-        return StringUtils.defaultIfBlank(selector.string(), "<none>");
+        return StringUtils.defaultIfBlank(selector.string(), NONE);
     }
 
     private static String convertOperatorValue(V1LabelSelectorRequirement expression) throws RequirementException {
@@ -158,12 +177,12 @@ public class FormatUtils {
 
     public static String formatEndpoints(V1Endpoints v1Endpoints, String name) {
         if (v1Endpoints == null) {
-            return "<none>";
+            return NONE;
         }
 
         List<V1EndpointSubset> subsets = v1Endpoints.getSubsets();
         if (subsets.isEmpty()) {
-            return "<none>";
+            return NONE;
         }
 
         List<String> list = new ArrayList<>();
