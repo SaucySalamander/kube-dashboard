@@ -25,12 +25,14 @@ pipeline {
         stage('Build Project') {
             steps {
                 checkout scm
-                    withSonarQubeEnv("sonar") {
-                        sh './gradlew build sonarqube --no-daemon'
-                        sh 'docker build . --file src/main/docker/Dockerfile --tag cjvogel1972/kube-dashboard:0.0.1'
-                        sh 'docker push cjvogel1972/kube-dashboard:0.0.1'
-                    }
+                withSonarQubeEnv("sonar") {
+                    sh './gradlew build sonarqube --no-daemon'
+                }
             }
+        }
+
+        stage('Build Docker image') {
+            docker.build("cjvogel1972/kube-dashboard:0.0.1").push()
         }
     }
 }
