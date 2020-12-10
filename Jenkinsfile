@@ -5,7 +5,7 @@ pipeline {
     }
     environment {
         registry = "cjvogel1972/kube-dashboard"
-        registryCredential = ‘dockerhub’
+        registryCredential = 'dockerhub'
     }
     options {
         skipDefaultCheckout()
