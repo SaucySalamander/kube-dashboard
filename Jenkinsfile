@@ -2,7 +2,7 @@ pipeline {
     agent any
     tools {
         jdk "jdk11"
-        docker "docker"
+        dockerTool "docker"
     }
     environment {
         registry = "cjvogel1972/kube-dashboard"
