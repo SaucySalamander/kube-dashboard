@@ -61,7 +61,6 @@ pipeline {
                           script: 'git --no-pager show -s --format=\'%an\'',
                           returnStdout: true
                     ).trim()
-                    echo "Author ${committerName}"
                     PARAM = """
                     {
                         "pipeline":{
@@ -70,7 +69,6 @@ pipeline {
                         }
                     }
                     """
-                    echo "${PARAM}"
                     cloudBeesFlowRunPipeline addParam: "${PARAM}", configuration: 'Codefest', pipelineName: 'K8s_Pipeline', projectName: 'Codefest'
                 }
             }
