@@ -1,17 +1,35 @@
 package org.vogel.kubernetes.dashboard;
 
-import io.kubernetes.client.models.*;
+import io.kubernetes.client.models.V1Container;
+import io.kubernetes.client.models.V1ContainerState;
+import io.kubernetes.client.models.V1ContainerStateTerminated;
+import io.kubernetes.client.models.V1ContainerStateWaiting;
+import io.kubernetes.client.models.V1ContainerStatus;
+import io.kubernetes.client.models.V1ObjectMeta;
+import io.kubernetes.client.models.V1OwnerReference;
+import io.kubernetes.client.models.V1Pod;
+import io.kubernetes.client.models.V1PodCondition;
+import io.kubernetes.client.models.V1PodSpec;
+import io.kubernetes.client.models.V1PodStatus;
+import io.kubernetes.client.models.V1Toleration;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.joda.time.DateTime;
 import org.thymeleaf.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.vogel.kubernetes.dashboard.FormatUtils.printMultiline;
 import static org.vogel.kubernetes.dashboard.FormatUtils.translateTimestamp;
 
