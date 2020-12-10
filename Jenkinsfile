@@ -34,7 +34,9 @@ pipeline {
 
         stage('Build Docker image') {
             steps {
-                docker.build("cjvogel1972/kube-dashboard:0.0.1").push()
+                script {
+                    docker.build("cjvogel1972/kube-dashboard:0.0.1").push()
+                }
             }
         }
     }
