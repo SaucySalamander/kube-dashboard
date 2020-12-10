@@ -37,7 +37,6 @@ sonarqube {
         property "sonar.projectKey", "cjvogel1972_kube-dashboard"
         property "sonar.organization", "cjvogel1972"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.sources", "src/main/java,src/main/resources/templates"
     }
 }
 
