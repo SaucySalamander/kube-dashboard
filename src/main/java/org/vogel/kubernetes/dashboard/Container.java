@@ -239,48 +239,62 @@ public class Container {
         if (envVars != null) {
             for (V1EnvVar envVar : envVars) {
                 ContainerEnvironment containerEnvironment = null;
-                V1EnvVarSource envVarValueFrom = envVar.getValueFrom();
-                if (envVarValueFrom == null) {
+                if (envVar.getValueFrom() == null) {
                     containerEnvironment = new ContainerEnvironment(envVar.getName(), envVar.getValue(), null);
                 } else {
-                    if (envVarValueFrom.getFieldRef() != null) {
-                        String valueFrom = "";
-
-                        V1ObjectFieldSelector fieldRef = envVarValueFrom.getFieldRef();
-                        String value = String.format("%s (%s:%s)", valueFrom, fieldRef.getApiVersion(),
-                                                     fieldRef.getFieldPath());
-                        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
-                    } else if (envVarValueFrom.getResourceFieldRef() != null) {
-                        String valueFrom = extractContainerResourceValue(envVarValueFrom.getResourceFieldRef(),
-                                                                         kubeContainer);
-                        String resource = envVarValueFrom.getResourceFieldRef()
-                                .getResource();
-                        if (valueFrom.equals("0") && StringUtils.equalsAny(resource, "limits.cpu", "limits.memory")) {
-                            valueFrom = "node allocatable";
-                        }
-                        String value = String.format("%s (%s)", valueFrom, resource);
-                        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
-                    } else if (envVarValueFrom.getSecretKeyRef() != null) {
-                        V1SecretKeySelector secretKeyRef = envVarValueFrom.getSecretKeyRef();
-                        Boolean optional = Boolean.TRUE.equals(secretKeyRef.isOptional());
-                        String value = String.format("&lt;set to the key '%s' in secret '%s'&gt;",
-                                                     secretKeyRef.getKey(),
-                                                     secretKeyRef.getName());
-                        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, optional);
-                    } else if (envVarValueFrom.getConfigMapKeyRef() != null) {
-                        V1ConfigMapKeySelector configMapKeyRef = envVarValueFrom.getConfigMapKeyRef();
-                        Boolean optional = Boolean.TRUE.equals(configMapKeyRef.isOptional());
-                        String value = String.format("&lt;set to the key '%s' in config map '%s'&gt;",
-                                                     configMapKeyRef.getKey(),
-                                                     configMapKeyRef.getName());
-                        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, optional);
-                    }
+                    containerEnvironment = buildContainerEnvironmentFromEnvVar(kubeContainer, envVar);
                 }
                 if (containerEnvironment != null) {
                     env.add(containerEnvironment);
                 }
             }
         }
+    }
+
+    private ContainerEnvironment buildContainerEnvironmentFromEnvVar(V1Container kubeContainer, V1EnvVar envVar) {
+        ContainerEnvironment containerEnvironment = null;
+        V1EnvVarSource envVarValueFrom = envVar.getValueFrom();
+
+        if (envVarValueFrom.getFieldRef() != null) {
+            String valueFrom = "";
+
+            V1ObjectFieldSelector fieldRef = envVarValueFrom.getFieldRef();
+            String value = String.format("%s (%s:%s)", valueFrom, fieldRef.getApiVersion(),
+                                         fieldRef.getFieldPath());
+            containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
+        } else if (envVarValueFrom.getResourceFieldRef() != null) {
+            containerEnvironment = describeResoourceFieldEnvVar(kubeContainer, envVar, envVarValueFrom);
+        } else if (envVarValueFrom.getSecretKeyRef() != null) {
+            V1SecretKeySelector secretKeyRef = envVarValueFrom.getSecretKeyRef();
+            Boolean optional = Boolean.TRUE.equals(secretKeyRef.isOptional());
+            String value = String.format("&lt;set to the key '%s' in secret '%s'&gt;",
+                                         secretKeyRef.getKey(),
+                                         secretKeyRef.getName());
+            containerEnvironment = new ContainerEnvironment(envVar.getName(), value, optional);
+        } else if (envVarValueFrom.getConfigMapKeyRef() != null) {
+            V1ConfigMapKeySelector configMapKeyRef = envVarValueFrom.getConfigMapKeyRef();
+            Boolean optional = Boolean.TRUE.equals(configMapKeyRef.isOptional());
+            String value = String.format("&lt;set to the key '%s' in config map '%s'&gt;",
+                                         configMapKeyRef.getKey(),
+                                         configMapKeyRef.getName());
+            containerEnvironment = new ContainerEnvironment(envVar.getName(), value, optional);
+        }
+        return containerEnvironment;
+    }
+
+    private ContainerEnvironment describeResoourceFieldEnvVar(V1Container kubeContainer, V1EnvVar envVar,
+                                                              V1EnvVarSource envVarValueFrom) {
+        ContainerEnvironment containerEnvironment;
+        String valueFrom = extractContainerResourceValue(envVarValueFrom.getResourceFieldRef(),
+                                                         kubeContainer);
+        String resource = envVarValueFrom.getResourceFieldRef()
+                .getResource();
+        if (valueFrom.equals("0") && StringUtils.equalsAny(resource, "limits.cpu", "limits.memory")) {
+            valueFrom = "node allocatable";
+        }
+        String value = String.format("%s (%s)", valueFrom, resource);
+        containerEnvironment = new ContainerEnvironment(envVar.getName(), value, null);
+        return containerEnvironment;
     }
 
     private String extractContainerResourceValue(V1ResourceFieldSelector fs,

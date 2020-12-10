@@ -7,7 +7,25 @@ import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.AppsV1beta2Api;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.ExtensionsV1beta1Api;
-import io.kubernetes.client.models.*;
+import io.kubernetes.client.models.V1ConfigMapList;
+import io.kubernetes.client.models.V1Endpoints;
+import io.kubernetes.client.models.V1EndpointsList;
+import io.kubernetes.client.models.V1EventList;
+import io.kubernetes.client.models.V1NamespaceList;
+import io.kubernetes.client.models.V1ObjectMeta;
+import io.kubernetes.client.models.V1OwnerReference;
+import io.kubernetes.client.models.V1PersistentVolumeClaimList;
+import io.kubernetes.client.models.V1PersistentVolumeList;
+import io.kubernetes.client.models.V1PodList;
+import io.kubernetes.client.models.V1PodTemplateSpec;
+import io.kubernetes.client.models.V1Service;
+import io.kubernetes.client.models.V1ServiceList;
+import io.kubernetes.client.models.V1beta1Ingress;
+import io.kubernetes.client.models.V1beta1IngressList;
+import io.kubernetes.client.models.V1beta2Deployment;
+import io.kubernetes.client.models.V1beta2DeploymentList;
+import io.kubernetes.client.models.V1beta2ReplicaSet;
+import io.kubernetes.client.models.V1beta2ReplicaSetList;
 import io.kubernetes.client.util.Config;
 import org.springframework.stereotype.Component;
 import org.vogel.kubernetes.dashboard.configmap.ConfigMap;
@@ -30,6 +48,8 @@ import static java.util.stream.Collectors.toList;
 @Component
 public class KubernetesUtils {
 
+    public static final String FALSE = "false";
+
     public KubernetesUtils() throws IOException {
         ApiClient client = Config.defaultClient();
         Configuration.setDefaultApiClient(client);
@@ -47,7 +67,7 @@ public class KubernetesUtils {
         CoreV1Api api = new CoreV1Api();
         String filter = String.format("involvedObject.kind=%s,involvedObject.name=%s,involvedObject.uid=%s", kind,
                                       replicaSetName, uid);
-        V1EventList eventList = api.listNamespacedEvent(namespace, "false", null, filter, null, null, null, null, null,
+        V1EventList eventList = api.listNamespacedEvent(namespace, FALSE, null, filter, null, null, null, null, null,
                                                         null);
 
         return createListObjects(eventList.getItems(), Event::new);
@@ -69,13 +89,13 @@ public class KubernetesUtils {
     public String getPodLogs(String namespace, String podName) throws ApiException {
         CoreV1Api api = new CoreV1Api();
 
-        return api.readNamespacedPodLog(podName, namespace, null, null, null, "false", null, null, null, null);
+        return api.readNamespacedPodLog(podName, namespace, null, null, null, FALSE, null, null, null, null);
     }
 
     public List<ReplicaSet> getReplicaSets(String namespace) throws ApiException {
         AppsV1beta2Api api = new AppsV1beta2Api();
 
-        V1beta2ReplicaSetList replicaSetList = api.listNamespacedReplicaSet(namespace, "false", null, null, null, null,
+        V1beta2ReplicaSetList replicaSetList = api.listNamespacedReplicaSet(namespace, FALSE, null, null, null, null,
                                                                             null, null, null, null);
 
         return createListObjects(replicaSetList.getItems(), ReplicaSet::new);
@@ -96,7 +116,7 @@ public class KubernetesUtils {
     private PodStatus getPodStatusForController(String namespace, String selector, String uid) throws ApiException {
         CoreV1Api api = new CoreV1Api();
 
-        V1PodList podList = api.listNamespacedPod(namespace, "false", null, null, null, selector, null, null, null,
+        V1PodList podList = api.listNamespacedPod(namespace, FALSE, null, null, null, selector, null, null, null,
                                                   null);
 
         return new PodStatus(podList.getItems(), uid, this);
@@ -105,7 +125,7 @@ public class KubernetesUtils {
     public List<Deployment> getDeployments(String namespace) throws ApiException {
         AppsV1beta2Api api = new AppsV1beta2Api();
 
-        V1beta2DeploymentList deploymentList = api.listNamespacedDeployment(namespace, "false", null, null, null, null,
+        V1beta2DeploymentList deploymentList = api.listNamespacedDeployment(namespace, FALSE, null, null, null, null,
                                                                             null, null, null, null);
 
         return createListObjects(deploymentList.getItems(), Deployment::new);
@@ -132,7 +152,7 @@ public class KubernetesUtils {
                                                              String uid) throws ApiException {
         AppsV1beta2Api api = new AppsV1beta2Api();
 
-        V1beta2ReplicaSetList replicaSetList = api.listNamespacedReplicaSet(namespace, "false", null, null, null,
+        V1beta2ReplicaSetList replicaSetList = api.listNamespacedReplicaSet(namespace, FALSE, null, null, null,
                                                                             selector, null, null, null, null);
         List<V1beta2ReplicaSet> replicaSets = replicaSetList.getItems();
         return replicaSets.stream()
@@ -226,7 +246,7 @@ public class KubernetesUtils {
     public List<Service> getServices(String namespace) throws ApiException {
         CoreV1Api api = new CoreV1Api();
 
-        V1ServiceList serviceList = api.listNamespacedService(namespace, "false", null, null, null, null, null, null,
+        V1ServiceList serviceList = api.listNamespacedService(namespace, FALSE, null, null, null, null, null, null,
                                                               null, null);
 
         return createListObjects(serviceList.getItems(), Service::new);
@@ -245,13 +265,13 @@ public class KubernetesUtils {
         CoreV1Api api = new CoreV1Api();
 
         String filter = String.format("metadata.name=%s", name);
-        return api.listNamespacedEndpoints(namespace, "false", null, filter, null, null, null, null, null, null);
+        return api.listNamespacedEndpoints(namespace, FALSE, null, filter, null, null, null, null, null, null);
     }
 
     public List<Ingress> getIngresses(String namespace) throws ApiException {
         ExtensionsV1beta1Api api = new ExtensionsV1beta1Api();
 
-        V1beta1IngressList ingressList = api.listNamespacedIngress(namespace, "false", null, null, null, null, null,
+        V1beta1IngressList ingressList = api.listNamespacedIngress(namespace, FALSE, null, null, null, null, null,
                                                                    null, null, null);
 
         return createListObjects(ingressList.getItems(), Ingress::new);
@@ -274,7 +294,7 @@ public class KubernetesUtils {
     public List<ConfigMap> getConfigMaps(String namespace) throws ApiException {
         CoreV1Api api = new CoreV1Api();
 
-        V1ConfigMapList configMapList = api.listNamespacedConfigMap(namespace, "false", null, null, null, null, null,
+        V1ConfigMapList configMapList = api.listNamespacedConfigMap(namespace, FALSE, null, null, null, null, null,
                                                                     null,
                                                                     null, null);
 
@@ -290,7 +310,7 @@ public class KubernetesUtils {
     public List<PersistentVolume> getPersistentVolumes() throws ApiException {
         CoreV1Api api = new CoreV1Api();
 
-        V1PersistentVolumeList persistentVolumeList = api.listPersistentVolume("false", null, null, null, null, null,
+        V1PersistentVolumeList persistentVolumeList = api.listPersistentVolume(FALSE, null, null, null, null, null,
                                                                                null, null,
                                                                                null);
 
@@ -307,7 +327,7 @@ public class KubernetesUtils {
         CoreV1Api api = new CoreV1Api();
 
         V1PersistentVolumeClaimList persistentVolumeClaimList = api.listNamespacedPersistentVolumeClaim(namespace,
-                                                                                                        "false", null,
+                                                                                                        FALSE, null,
                                                                                                         null,
                                                                                                         null, null,
                                                                                                         null, null,

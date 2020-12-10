@@ -103,7 +103,7 @@ public class Pod extends Metadata {
                         } else {
                             reason = String.format("ExitCode:%d", terminated.getExitCode());
                         }
-                    } else if (container.isReady() && containerState.getRunning() != null) {
+                    } else if (Boolean.TRUE.equals(container.isReady()) && containerState.getRunning() != null) {
                         hasRunning = true;
                         readyContainers++;
                     }
