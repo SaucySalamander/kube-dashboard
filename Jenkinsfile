@@ -3,6 +3,10 @@ pipeline {
     tools {
         jdk "jdk11"
     }
+    environment {
+        registry = "cjvogel1972/kube-dashboard"
+        registryCredential = ‘dockerhub’
+    }
     options {
         skipDefaultCheckout()
         timestamps()
@@ -24,6 +28,7 @@ pipeline {
                     withSonarQubeEnv("sonar") {
                         sh './gradlew build sonarqube --no-daemon'
                         sh 'docker build . --file src/main/docker/Dockerfile --tag cjvogel1972/kube-dashboard:0.0.1'
+                        sh 'docker push cjvogel1972/kube-dashboard:0.0.1'
                     }
             }
         }
